@@ -1,0 +1,129 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			{% if failed_reason %}
+				<div class="alert alert-danger alert-dismissible text-center">
+					{% if failed_reason == "NEITHER_SENDER_NOR_DRIVER" %}
+						화주정보와 차주정보가 모두 없는 유저입니다. 개발자에게 연락 바랍니다.
+					{% elif failed_reason == "HP_EXIST" %}
+						전화번호가 이미 존재합니다.
+					{% elif failed_reason == "VEHICLE_ID_EXIST" %}
+						차량번호가 이미 존재합니다.
+					{% else %}
+						확인되지 않은 오류가 발생했습니다. 개발자에게 연락 바랍니다.
+					{% endif %}
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			{% endif %}
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">계정정보 수정</span>
+			</h1>
+
+			<script>function unblockButton(buttonId) {document.getElementById(buttonId).disabled = false}</script>
+
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+							<form name="change-userinfo" method="POST" action="/ADMIN/users/{{ user.id }}">
+								{% if user.is_sender %}
+
+									<div class="form-group">
+										<label class="form-label" for="email">이메일</label>
+										<input id="email" value="{{ user.email or '' }}" class="form-control" readonly/>
+										<label class="form-label" for="company-name">회사 이름</label>
+										<input
+											id="company-name" name="company_name" value="{{ user.company_name or '' }}"
+											class="form-control" onchange="unblockButton('save-button')"
+										/>
+										<label class="form-label" for="company-address">회사 주소</label>
+										<input
+											id="company-address" name="company_address" value="{{ user.company_address or ''}}"
+											class="form-control" onchange="unblockButton('save-button')"
+										/>
+									</div>
+
+								{% elif user.is_driver %}
+
+									<div class="form-group">
+										<label class="form-label" for="name">이름</label>
+										<input
+											id="name" name="name" value="{{ user.name }}"
+											class="form-control" onchange="unblockButton('save-button')" required
+										/>
+
+										<label class="form-label" for="HP">전화번호</label>
+										<input
+											id="HP" name="HP" value="{{ user.HP }}"
+											class="form-control"
+											placeholder="010XXXXXXXX"
+											onchange="unblockButton('save-button')" required
+										/>
+
+										<label class="form-label" for="birthday">생년월일</label>
+										<input
+											id="birthday" name="birthday" value="{{ user.birthday }}"
+											type="date" class="form-control" onchange="unblockButton('save-button')" required
+										/>
+									</div>
+
+									<div class="form-group">
+										<label class="form-label" for="vehicle_id">차량번호</label>
+										<input
+											id="vehicle_id" name="vehicle_id" value="{{ user.vehicle_id }}"
+											class="form-control" onchange="unblockButton('save-button')" required
+										/>
+
+										<label class="form-label" for="vehicle_type">차종</label>
+										<select
+											name="vehicle_type" id="vehicle_type" class="form-control"
+											onchange="unblockButton('save-button')"
+										>
+											<option value="TRUCK_1T">1톤</option>
+											<option value="TRUCK_1_4T">1.4톤</option>
+											<option value="TRUCK_2_5T">2.5톤</option>
+											<option value="TRUCK_3_5T">3.5톤</option>
+											<option value="TRUCK_5T">5톤</option>
+											<option value="TRUCK_11T">11톤</option>
+											<option value="TRUCK_18T">18톤</option>
+											<option value="TRUCK_25T">25톤</option>
+										</select>
+										<script>
+											document.getElementById("vehicle_type").value = "{{ user.vehicle_type.name }}"
+										</script>
+									</div>
+
+								{% endif %}
+
+								<div class="d-flex justify-content-center">
+									<button type="submit" id="save-button" class="btn btn-primary px-2 my-2" disabled>저장</button>
+								</div>
+							</form>
+
+							<hr class="hr"/>
+
+							<form name="change-password" method="POST" action="/ADMIN/users/{{ user.id }}/password">
+								<div class="form-group">
+									<label class="form-label" for="password">암호</label>
+									<input
+										id="password" name="password" class="form-control" type="password"
+										onchange="unblockButton('change-button')" required
+									/>
+								</div>
+								<div class="d-flex justify-content-center">
+									<button type="submit" id="change-button" class="btn btn-danger px-2 my-2" disabled>암호변경</button>
+								</div>
+							</form>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

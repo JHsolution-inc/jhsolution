@@ -1,0 +1,47 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container text-center">
+			<div id="alert-div"></div>
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">차량정보 API 테스트</span>
+			</h1>
+
+			{% if result == "accepted" %}
+				<h3>인증되었습니다.<h3>
+			{% elif result == "denied" %}
+				<h3>실패하였습니다.<h3>
+			{% else %}
+				<h3>인증 시도하기</h3>
+
+				<form
+					id="api-form"
+					method="post"
+					onsubmit="return false;"
+					action="https://car365.go.kr/aio365/provide/ProvideContent.do"
+				>
+					<input type="hidden" id="svcType" name="svcType" value="">
+					{% for name, value in request_params.items() %}
+						<input type="hidden" name="{{ name }}" value="{{ value }}">
+					{% endfor %}
+
+					<button class="btn btn-primary" onclick="auth('N')">일반 인증</button>
+					<button class="btn btn-primary" onclick="auth('Y')">차량 고정 인증</button>
+				</form>
+
+				<script>
+					function auth(svcTypeValue) {
+						const svcTypeInput = document.getElementById("svcType")
+						const form = document.getElementById("api-form")
+						svcTypeInput.value = svcTypeValue
+						form.target = "api-form"
+						window.open("", "api-form", "width=0, height=0")
+						form.submit()
+					}
+				</script>
+			{% endif %}
+		</div>
+	</section>
+{% endblock %}

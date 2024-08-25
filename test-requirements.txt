@@ -1,0 +1,12 @@
+# types
+mypy
+sqlalchemy[mypy]
+types-requests
+
+# tests
+pytest
+pytest-cov
+pytest-alembic
+pytest-order
+pytest-dependency
+pytest-playwright

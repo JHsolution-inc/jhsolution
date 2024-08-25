@@ -1,0 +1,17 @@
+# Environment file
+.vscode
+venv
+.env
+
+# Test coverage report
+cov.xml
+.coverage
+htmlcov
+
+# Python cache
+__pycache__/
+.mypy_cache
+.pytest_cache
+
+# npm cache
+node_modules

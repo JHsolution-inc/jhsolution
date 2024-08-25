@@ -1,0 +1,31 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container text-center">
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">관리자 로그인</span>
+			</h1>
+
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+							<form name="admin-login" method="POST" action="/ADMIN/auth">
+								<div class="form-group">
+									<label class="form-label" for="email">관리자 암호</label>
+									<input type="password" id="password" name="password" class="form-control" required/>
+								</div>
+								<div class="py-3"></div>
+								<button type="submit" class="btn btn-primary mb-2">관리자 로그인</button>
+							</form>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

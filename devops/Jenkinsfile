@@ -1,0 +1,141 @@
+pipeline {
+	agent any
+	parameters {
+		credentials \
+			credentialType: 'org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl',
+			name: 'envfile',
+			description: 'Backend application environment file',
+			required: true
+	}
+
+	stages {
+		stage("Build Volume") {
+			steps {
+				sh "git archive --format tar -o jhsol.tar HEAD"
+
+				sh """if [ "\$(docker volume ls | grep jhsol-build)" ]; then
+					docker volume rm jhsol-build
+				fi"""
+				sh "docker volume create jhsol-build"
+
+				sh "docker container create --name temp -v jhsol-build:/build busybox"
+				sh "cat jhsol.tar | docker cp - temp:/build"
+				sh "docker rm -f temp"
+			}
+		}
+
+		stage("Build Container") {
+			steps {
+				sh """docker build \\
+					-t jhsol-backend:\$(git rev-parse --short HEAD) \\
+					-t jhsol-backend:latest \\
+					-f Dockerfile.deploy \\
+					.
+				"""
+				sh """docker build \\
+					-t jhsol-backend-test:\$(git rev-parse --short HEAD) \\
+					-t jhsol-backend-test:latest \\
+					-f Dockerfile.test \\
+					.
+				"""
+			}
+		}
+
+		stage("Test Application") {
+			environment {
+				ENVFILE=credentials("${params.envfile}")
+			}
+			steps {
+				sh "docker run --rm -v jhsol-build:/build -w /build jhsol-backend-test:latest mypy"
+				sh "docker run --rm -v jhsol-build:/build -w /build --env-file ${ENVFILE} jhsol-backend-test:latest pytest --no-cov --test-migration"
+				sh "docker run --rm -v jhsol-build:/build -w /build jhsol-backend-test:latest find . -regex '^.*\\(__pycache__\\|\\.py[co]\\)\$' -delete"
+				sh "docker run --rm -v jhsol-build:/build -w /build jhsol-backend-test:latest rm -rf .mypy_cache .pytest_cache logs/log"
+				sh "docker run --rm -v jhsol-build:/build -w /build node:latest npm audit"
+			}
+		}
+
+		stage("Complie SCSS") {
+			steps {
+				sh "docker run --rm -v jhsol-build:/build -w /build node:latest npm install --save-dev"
+				sh "docker run --rm -v jhsol-build:/build -w /build node:latest npm run css"
+				sh "docker run --rm -v jhsol-build:/build -w /build node:latest cat static/css/styles.css > static/css/styles.css"
+				sh "docker run --rm -v jhsol-build:/build -w /build node:latest rm -r node_modules"
+			}
+		}
+
+		// TODO: Clone main database and test migration on the cloned database
+		stage("Upgrade Database") {
+			environment {
+				ENVFILE=credentials("${params.envfile}")
+				HEAD_VERSION = sh(returnStdout: true, script:"""
+					docker run --rm -v jhsol-build:/build --env-file $ENVFILE -w /build \\
+						jhsol-backend-test:latest python3 -m alembic heads
+				""")
+				DB_VERSION = sh(returnStdout: true, script: """
+					docker run --rm -v jhsol-build:/build --env-file $ENVFILE -w /build \\
+						jhsol-backend-test:latest python3 -m alembic current
+				""")
+			}
+			steps {
+				script {
+					if (env.HEAD_VERSION != env.DB_VERSION) {
+						// block client access
+						sh "docker exec nginx /etc/nginx/set_maintenance"
+						sh "docker exec nginx nginx -s reload"
+						
+						// restart the service to make sure that there is no database session
+						sh """
+							if [ \$(docker ps -aqf name=jhsol-backend-blue | wc -c) -gt 0 ]; then
+								docker restart jhsol-backend-blue 
+							fi
+						"""
+
+						// upgrade the database
+						sh "docker run --rm -v jhsol-build:/build -w /build --env-file ${ENVFILE} jhsol-backend python3 -m alembic upgrade head"
+					}
+				}
+			}
+		}
+
+		stage("Run Container") {
+			environment {
+				ENVFILE=credentials("${params.envfile}")
+			}
+			steps {
+				// Blue is main service and green is older one or just built new version
+				// This stage builds new green container
+
+				sh """
+					if [ \$(docker ps -aqf name=jhsol-backend-green | wc -c) -gt 0 ]; then
+						docker container rm -f jhsol-backend-green
+					fi
+				"""
+				sh """
+					docker container create --name jhsol-backend-green -w /application --env-file ${ENVFILE} \\
+					jhsol-backend:latest python3 -m uvicorn jhsolution.main:app --host 0.0.0.0 --port 80 --proxy-headers \\
+					--forwarded-allow-ips \$(docker inspect --format '{{.NetworkSettings.IPAddress}}' nginx)
+				"""
+				sh "tar -rf jhsol.tar static/css/styles.css"
+				sh "cat jhsol.tar | docker cp - jhsol-backend-green:/application"
+				sh "docker start jhsol-backend-green"
+			}
+		}
+
+		// TODO: Run black box test on green container before color swapping
+		stage("Swap Container Colors") {
+			steps {
+				sh "docker exec nginx /etc/nginx/set_upstream application http://\$(docker inspect --format '{{.NetworkSettings.IPAddress}}' jhsol-backend-green)"
+				sh "docker exec nginx nginx -s reload"
+				sh """
+					if [ \$(docker ps -aqf name=jhsol-backend-blue | wc -c) -gt 0 ]; then
+						docker container rename jhsol-backend-green jhsol-backend-gray
+						docker container rename jhsol-backend-blue jhsol-backend-green
+						docker container rename jhsol-backend-gray jhsol-backend-blue
+					else
+						docker container rename jhsol-backend-green jhsol-backend-blue
+					fi
+				"""
+			}
+		}
+	}
+}

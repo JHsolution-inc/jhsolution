@@ -1,0 +1,139 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container">
+			<script>
+				function alertError(errorMessage) {
+					const alert = document.createElement("div")
+					alert.classList.add("alert", "alert-danger", "alert-dismissible", "text-center")
+					alert.textContent = `${errorMessage} 관리자에게 문의 바랍니다.`
+
+					const alertDismissButton = document.createElement("button")
+					alertDismissButton.setAttribute("data-bs-dismiss", "alert")
+					alertDismissButton.classList.add("btn-close")
+					alertDismissButton.ariaLabel = "Close"
+					alert.appendChild(alertDismissButton)
+
+					const alertDiv = document.getElementById("alert-div")
+					alertDiv.appendChild(alert)
+				}
+
+				function blockButton(buttonId) {
+					button = document.getElementById(buttonId).disabled = true
+				}
+				function unblockButton(buttonId) {
+					button = document.getElementById(buttonId).disabled = false
+				}
+
+				async function updateSenderInfo() {
+					blockButton("save-button")
+
+					const companyName = document.getElementById("company-name").value
+					const companyAddress = document.getElementById("company-address").value
+
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}`, {
+							method: "POST", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify({"company_name": companyName, "company_address": companyAddress})
+						})
+					} catch (e) {
+						alertError("화주정보 수정에 실패했습니다.")
+					}
+				}
+
+				async function updatePassword() {
+					blockButton("change-button")
+					const password = document.getElementById("password").value
+
+					try {
+						await fetch(`${location.origin}/api/v1/account/password`, {
+							method: "PATCH", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify({"password": password})
+						})
+					} catch (e) {
+						alertError("암호 수정에 실패했습니다.")
+					}
+				}
+			</script>
+
+			<div id="alert-div"></div>
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">계정 관리</span>
+			</h1>
+
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+							{% if user.is_sender %}
+								<form name="change-userinfo" onsubmit="updateSenderInfo(); return false;">
+							{% endif %}
+
+							<div class="form-group">
+									<label class="form-label" for="company-name">계정번호</label>
+									<input
+										id="user-id" name="user-id" value="{{ user.id }}"
+										class="form-control"  readonly
+									/>
+								{% if user.is_sender %}
+									<label class="form-label" for="company-name">회사 이름</label>
+									<input
+										id="company-name" name="company-name" value="{{ user.company_name or ''}}"
+										class="form-control" onchange="unblockButton('save-button')"
+										{% if user.company and not user.is_owner %} readonly {% endif %}
+									/>
+									<label class="form-label" for="company-address">회사 주소</label>
+									<input
+										id="company-address" name="company-address" value="{{ user.company_address or ''}}"
+										class="form-control" onchange="unblockButton('save-button')"
+										{% if user.company and not user.is_owner %} readonly {% endif %}
+									/>
+								{% elif user.is_driver %}
+									<label class="form-label" for="name">이름</label>
+									<input class="form-control" id="name" name="name" value="{{ user.name }}" readonly />
+									<label class="form-label" for="HP">전화번호</label>
+									<input class="form-control" id="HP" name="HP" value="{{ user.HP }}" readonly />
+									<label class="form-label" for="birthday">생년월일</label>
+									<input class="form-control" id="brithday" name="birthday" value="{{ user.birthday }}" readonly />
+									<label class="form-label" for="vehicle-id">차량번호</label>
+									<input class="form-control" id="vehicle-id" name="vehicle-id" value="{{ user.vehicle_id }}" readonly />
+									<label class="form-label" for="vehicle-type">차종</label>
+									<input class="form-control" id="vehicle-type" name="vehicle-type" value="{{ user.vehicle_type.name }}" readonly />
+								{% endif %}
+							</div>
+
+							{% if user.is_sender %}
+								{% if user.company is none or user.is_owner %}
+									<div class="d-flex justify-content-center">
+										<button type="submit" id="save-button" class="btn btn-primary px-2 my-2" disabled>저장</button>
+									</div>
+								{% endif %}
+								</form>
+							{% endif %}
+
+							<hr class="hr"/>
+
+							<form name="change-password" onsubmit="updatePassword(); return false;">
+								<div class="form-group">
+									<label class="password" for="password">새 암호</label>
+									<input
+										id="password" name="password" type="password"
+										class="form-control" onchange="unblockButton('change-button')"
+									/>
+								</div>
+								<div class="d-flex justify-content-center">
+									<button type="submit" id="change-button" class="btn btn-danger px-2 my-2" disabled>암호변경</button>
+								</div>
+							</form>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

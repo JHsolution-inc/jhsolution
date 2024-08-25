@@ -1,0 +1,41 @@
+# backend framework
+fastapi
+jinja2
+python-multipart
+
+# rest api dependencies
+requests
+
+# oauth dependencies
+authlib
+starlette
+itsdangerous
+httpx
+
+# ORM library
+sqlalchemy
+psycopg2-binary
+alembic
+
+# barocert dependencies
+barocert
+pycryptodome
+cffi
+
+# asn1 libraries
+asn1crypto
+oscrypto
+certvalidator
+
+# logging
+structlog
+asgi-correlation-id
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+
+# utils
+pypdf
+
+# deployment
+uvicorn[standard]

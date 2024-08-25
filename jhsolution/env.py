@@ -1,0 +1,34 @@
+import os, dotenv, secrets
+dotenv.load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite://")
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+assert DATABASE_URL != TEST_DATABASE_URL
+
+OPEN_TELEMETRY_URL = os.getenv("OPEN_TELEMETRY_URL", "localhost:4317")
+
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", secrets.token_hex(32)) # use static key in the production
+ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER", "localhost")
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "fake password")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "fake@localhost")
+
+BAROCERT_LINKID = os.getenv("BAROCERT_LINKID", "link id")
+BAROCERT_SECRETKEY = os.getenv("BAROCERT_SECRETKEY", "FAKE+BASE64+ENCODED+256+BITS+AES+SECRET+KEY=")
+BAROCERT_KAKAO_CLIENTCODE = os.getenv("BAROCERT_KAKAO_CLIENTCODE", "kakao client code")
+BAROCERT_NAVER_CLIENTCODE = os.getenv("BAROCERT_NAVER_CLIENTCODE", "naver client code")
+BAROCERT_PASS_CLIENTCODE = os.getenv("BAROCERT_PASS_CLIENTCODE", "pass client code")
+CALL_CENTER_NUM = os.getenv("CALL_CENTER_NUM", "1234567890")
+
+CAR365_INSTT_CODE = os.getenv("CAR365_INSTT_CODE", "0123456789ABCDEF0123456789ABCDEF")
+CAR365_SVC_CODE = os.getenv("CAR365_SVC_CODE","0123456789ABCDEF0123456789ABCDEF")
+CAR365_SITE_URL = os.getenv("CAR365_SITE_URL", "registered site url")
+CAR365_SITE_NAME = os.getenv("CAR365_SITE_NAME", "registered site name")
+
+BROWSER_TEST_PORT = os.getenv("BROWSER_TEST_PORT", "9999")
+DATABASE_ECHO = os.getenv("DATABASE_ECHO") == "yes"
+IS_PRODUCTION = os.getenv("IS_PRODUCTION") == "yes"

@@ -1,0 +1,140 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			{% if failed_reason %}
+				<div class="alert alert-danger alert-dismissible text-center">
+					{% if failed_reason == "USER_IS_OWNER" %}
+						그룹 관리자는 제거할 수 없습니다. 먼저 다른 계정을 관리자로 교체해 주세요.
+					{% elif failed_reason == "USER_NOT_EXIST" %}
+						해당 유저 계정이 없습니다.
+					{% elif failed_reason == "USER_HAS_COMPANY" %}
+						해당 계정은 이미 다른 그룹의 멤버입니다.
+					{% else %}
+						멤버 수정에 실패하였습니다.
+					{% endif %}
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			{% endif %}
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">회사 멤버 수정</span>
+			</h1>
+
+			<div class="card shadow">
+				<div class="card-body">
+					<div class="overflow-auto">
+
+						<h1 class="fw-bolder mb-0 py-3 pb-5 text-center">
+							<span class="text-primary d-inline">멤버 관리</span>
+						</h1>
+
+						<table class="table">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="d-none d-md-block">회원번호</span>
+										<span class="d-block d-md-none">#</span>
+									</th>
+									<th scope="col">이메일</th>
+									<th scope="col">관리자 변경</th>
+									<th scope="col">멤버 제거</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for member in company.members %}
+									<tr>
+										<th scope="row">{{ member.id }}</th>
+										<td>{{ member.email or "" }}</td>
+										<td>
+											<form method="POST" action="/ADMIN/companies/{{ company.id }}/set-owner">
+												<input type="hidden" name="uid" value="{{ member.id }}">
+												<button class="btn btn-primary" disabled>
+													{% if member.id == company.owner_id %}
+														관리자
+													{% else %}
+														미구현
+													{% endif %}
+												</button>
+											</form>
+										</td>
+										<td>
+											<form method="POST" action="/ADMIN/companies/{{ company.id }}/delete-member">
+												<input type="hidden" name="uid" value="{{ member.id }}">
+												<button class="btn btn-danger" {% if member.id == company.owner_id %} disabled {% endif %}>
+													제거
+												</button>
+											</form>
+										</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+						<hr class="hr" />
+
+						<h1 class="fw-bolder mb-0 py-3 pb-5 text-center">
+							<span class="text-primary d-inline">멤버 추가</span>
+						</h1>
+
+						<table class="table">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="d-none d-md-block">회원번호</span>
+										<span class="d-block d-md-none">#</span>
+									</th>
+									<th scope="col">이메일</th>
+									<th scope="col">멤버 추가</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for user in others %}
+									<tr>
+										<th scope="row">{{ user.id }}</th>
+										<td>{{ user.email or "" }}</td>
+										<td>
+											<form method="POST" action="/ADMIN/companies/{{ company.id }}/add-member">
+												<input type="hidden" name="uid" value="{{ user.id }}">
+												<button class="btn btn-primary">
+													추가
+												</button>
+											</form>
+										</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+						<nav>
+							<ul class="pagination justify-content-center">
+								<li class="page-item {{'disabled' if page == 1 else ''}}">
+									<a class="page-link" href="/ADMIN/companies?page={{ page - 1 }}" aria-label="Previous">
+										<span aria-hidden="true">&laquo;</span>
+									</a>
+								</li>
+								{% if page > 1 %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/companies?page={{ page- 1 }}">{{ page - 1 }}</a></li>
+								{% endif %}
+								<li class="page-item"><a class="page-link" href="#">{{ page }}</a></li>
+								{% if not is_last_page %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/companies?page={{ page + 1 }}">{{ page + 1 }}</a></li>
+								{% endif %}
+								<li class="page-item {{'disabled' if is_last_page else ''}}">
+									<a class="page-link" href="/ADMIN/companies?page={{ page + 1 }}" aria-label="Next">
+										<span aria-hidden="true">&raquo;</span>
+									</a>
+								</li>
+							</ul>
+						</nav>
+
+						<div class="pb-4"></div>
+
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

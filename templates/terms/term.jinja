@@ -1,0 +1,40 @@
+{% extends "base.jinja" %}
+
+{% macro term_block(term_id, term_title) %}
+	<div class="row">
+		<button class="btn col-12 border-primary" data-bs-toggle="collapse" data-bs-target="#term-{{ term_id }}">
+			<h5 class="fw-bolder"> {{ term_title }} <i class="bi bi-arrows-collapse"></i> </h5>
+		</button>
+		<div class="collapse" id="term-{{ term_id }}">
+			<div class="py-2"></div>
+			{% set term_template = "terms/" + term_id + ".jinja"%}
+			{% include term_template %}
+			<div class="py-2"></div>
+		</div>
+	</div>
+{% endmacro %}
+
+{% block content %}
+	<style>
+		p {
+			margin-top: 0 !important;
+			margin-bottom: 0 !important;
+		}
+	</style>
+
+	<section class="bg-light py-5">
+		<div class="container">
+			<h1 class="fw-bolder text-center">JH솔루션 이용약관</h1>
+			<div class="py-4"></div>
+		
+			{{ term_block("eula-20240109", "서비스 이용약관 (2024.01.09.)") }}
+			{{ term_block("privacy-20240109", "개인정보처리방침 (2024.01.09.)") }}
+			{{ term_block("privacy-20240314", "개인정보처리방침 (2024.03.14.)") }}
+			{{ term_block("return-policy-20240109", "환불정책 (2024.01.09.)") }}
+			{{ term_block("signer-20240401", "서명자 이용약관 (2024.04.01.)") }}
+			{{ term_block("signer-privacy-20240401", "서명자 개인정보처리방침 (2024.04.01.)") }}
+			{{ term_block("signature-20240401", "전자서명 이용약관 (2024.04.01.)") }}
+			{{ term_block("signature-privacy-20240401", "전자서명 개인정보처리방침 (2024.04.01.)") }}
+		</div>
+	</section>
+{% endblock %}

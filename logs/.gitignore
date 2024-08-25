@@ -1,0 +1,4 @@
+# Application log files will be placed in this directory.
+
+*
+!.gitignore

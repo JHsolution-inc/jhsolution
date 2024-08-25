@@ -1,0 +1,695 @@
+{% extends "base.jinja" %}
+
+{##############################################################################}
+{# macro #}
+{##############################################################################}
+
+{% macro receiver_signing_modal_button(contact) %}
+	<button
+		type="button" data-bs-toggle="modal"
+		class="btn btn-primary mx-2 px-2 py-1"
+		data-bs-target="#signing-modal-{{ contact.id }}"
+	>
+		서명하기
+	</button>
+
+	<div class="modal fade" id="signing-modal-{{ contact.id }}" tabindex="-1">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<form
+					id="receiver-contact-form" name="sign-outboard"
+					onsubmit="signOutboard({{ contact.id }}); return false;"
+				>
+
+					<input id="contact-{{ contact.id }}-HP" value="{{ contact.HP }}" type="hidden">
+					<input id="contact-{{ contact.id }}-name" value="{{ contact.name }}" type="hidden">
+
+					<div class="modal-header">
+						<h5 class="modal-title">오더 서명하기</h5>
+						<button type="button" class="btn btn-close" aria-label="Close"data-bs-dismiss="modal"></button>
+					</div>
+
+					<div class="modal-body">
+						<h5>전자서명을 위해 생년윌일을 입력해 주세요.</h5>
+						<div class="d-flex justify-content-center">
+							<input
+								type="date" required
+								id="contact-{{ contact.id }}-birthday"
+								onchange="checkReceiverInput({{ contact.id }})"
+							>
+						</div>
+						<div class="d-flex justify-content-center">
+							<input
+								type="checkbox" required
+								id="contact-{{ contact.id }}-agreement"
+								class="form-check-input"
+								onchange="checkReceiverInput({{ contact.id }})"
+							>
+							<label class="form-check-label" for="agreement">
+								<a href="/terms/eula">이용약관들</a>에 동의합니다.
+							</label>
+						</div>
+
+
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+						<button
+							type="button" disabled
+							id="contact-{{ contact.id }}-signButton"
+							class="btn btn-primary dropdown-toggle"
+							data-bs-toggle="dropdown"
+						>
+							서명 요청하기
+						</button>
+
+						<div class="overflow-y-visible">
+							<ul class="dropdown-menu">
+								<li>
+									<button
+										class="dropdown-item" data-bs-dismiss="modal"
+										onclick="signOutboard({{ contact.id }}, 'kakao')"
+									>
+										카카오 서명
+									</button>
+								</li>
+								<li>
+									<button
+										class="dropdown-item" data-bs-dismiss="modal"
+										onclick="signOutboard({{ contact.id }}, 'naver')"
+									>
+										네이버 서명
+									</button>
+								</li>
+								<li>
+									<button
+										class="dropdown-item" data-bs-dismiss="modal"
+										onclick="signOutboard({{ contact.id }}, 'pass')"
+									>
+										패스 서명
+									</button>
+								</li>
+							</ul>
+						</div>
+					</div>
+
+				</form>
+			</div>
+		</div>
+	</div>
+{% endmacro %}
+
+{% macro sender_contact_edit_form(contact) %}
+	<td>
+		<input
+			class="form-control mx-2 w-100"
+			id="contact-{{ contact.id }}-name"
+			value="{{ contact.name }}"
+			onchange="enableEditButton({{ contact.id }})"
+		>
+	</td>
+	<td>
+		<input
+			class="form-control mx-2 w-100"
+			id="contact-{{ contact.id }}-HP"
+			value="{{ contact.HP }}"
+			placeholder="010XXXXXXXX"
+			onchange="enableEditButton({{ contact.id }})"
+		>
+	</td>
+	<td>
+		<button
+			id="contact-{{ contact.id }}-editButton"
+			class="btn btn-primary mx-2 px-2 py-1"
+			onclick="editContact({{ contact.id }})"
+			type="button" disabled
+		>
+			수정
+		</button>
+	</td>
+	<td>
+		<button
+			type="button"
+			class="btn btn-danger mx-2 px-2 py-1"
+			onclick="deleteContact({{ contact.id }})"
+		>
+			삭제
+		</button>
+	</td>
+{% endmacro %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			<script src=" https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js "></script>
+			<link href=" https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css " rel="stylesheet">
+			<script src=" https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/index.min.js "></script>
+			<link href=" https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.css " rel="stylesheet">
+
+			{##############################################################################}
+			{# script #}
+			{##############################################################################}
+
+			<script>
+				function alertError(errorMessage) {
+					const alert = document.createElement("div")
+					alert.classList.add("alert", "alert-danger", "alert-dismissible", "text-center")
+					alert.textContent = errorMessage
+
+					const alertDismissButton = document.createElement("button")
+					alertDismissButton.setAttribute("data-bs-dismiss", "alert")
+					alertDismissButton.classList.add("btn-close")
+					alertDismissButton.ariaLabel = "Close"
+					alert.appendChild(alertDismissButton)
+
+					const alertDiv = document.getElementById("alert-div")
+					alertDiv.appendChild(alert)
+				}
+
+				async function checkOrderState() {
+					const apiUrl = `${location.origin}/api/v1${location.pathname}`
+					const response = await fetch(apiUrl)
+					const orderInfo = await response.json()
+					if (orderInfo['state'] != "{{ order.state.name }}" ) {
+						window.location.reload()
+					}
+				}
+
+				function enableEditButton(contactId) {
+					document.getElementById(`contact-${contactId}-editButton`).disabled = false
+				}
+
+				function disableEditButton(contactId) {
+					document.getElementById(`contact-${contactId}-editButton`).disabled = true
+				}
+
+				function tdWraper(element) {
+					const td = document.createElement("td")
+					td.appendChild(element)
+					return td
+				}
+
+				function appendContactForm(role) {
+					if (! this.counter ) this.counter = 0
+					this.counter += 1
+
+					const nameInput = document.createElement("input")
+					nameInput.id = `contactForm-${this.counter}-name`
+					nameInput.classList.add("form-control", "mx-2", "w-100")
+
+					const HPInput = document.createElement("input")
+					HPInput.id = `contactForm-${this.counter}-HP`
+					HPInput.classList.add("form-control", "mx-2", "w-100")
+					HPInput.placeholder="010XXXXXXXX"
+
+					const addButton = document.createElement("button")
+					addButton.textContent = "추가"
+					addButton.id = `contactForm-${this.counter}-addButton`
+					addButton.classList.add("btn", "btn-primary", "mx-2", "px-2", "py-1")
+					addButton.onclick = (event) => {addContact(role, this.counter)}
+
+					const row = document.createElement("tr")
+					row.id = `contactForm-${this.counter}-row`
+					row.append(tdWraper(nameInput))
+					row.append(tdWraper(HPInput))
+					row.append(tdWraper(addButton))
+
+					const tbody = document.getElementById(`${role}-contact-list-tbody`)
+					tbody.append(row)
+				}
+				
+				async function addContact(role, contactFormId) {
+					// Get elements
+
+					console.log(contactFormId)
+
+					const nameInput = document.getElementById(`contactForm-${contactFormId}-name`)
+					const HPInput = document.getElementById(`contactForm-${contactFormId}-HP`)
+					const addButton = document.getElementById(`contactForm-${contactFormId}-addButton`)
+					const contactFormRow = document.getElementById(`contactForm-${contactFormId}-row`)
+
+					// Call API
+
+					try {
+						const bodyData = [{"name": nameInput.value, "HP": HPInput.value, "role": role.toUpperCase()}]
+
+						const response = await fetch(`${location.origin}/api/v1${location.pathname}/contacts`, {
+							headers: {"Content-Type": "application/json"},
+							method: "POST", body: JSON.stringify(bodyData)
+						})
+
+						const responseData = await response.json()
+						console.log(responseData)
+						const contactId = responseData[0]["id"]
+					} catch (e) {
+						alertError("연락처 추가에 실패했습니다.")
+						return
+					}
+
+					// Alter elements
+
+					nameInput.id = `contact-${contactId}-name`
+					nameInput.onchange = (event) => {enableEditButton(contactId)}
+
+					HPInput.id = `contact-${contactId}-HP`
+					HPInput.onchange = (event) => {enableEditButton(contactId)}
+
+					const editButton = addButton
+					editButton.textContent = "수정"
+					editButton.id = `contact-${contactId}-button`
+					editButton.onclick = (event) => {editContact(contactId)}
+					editButton.disabled = true
+
+					const deleteButton = document.createElement("button")
+					deleteButton.textContent = "삭제"
+					deleteButton.classList.add("btn", "btn-danger", "mx-2", "px-2", "py-1")
+					deleteButton.onclick = (event) => {deleteContact(contactId)}
+					contactFormRow.appendChild(tdWraper(deleteButton))
+
+					contactFormRow.id = `contact-${contactId}-row`
+				}
+
+				async function editContact(contactId) {
+					disableEditButton(contactId)
+
+					const name = document.getElementById(`contact-${contactId}-name`).value
+					const HP = document.getElementById(`contact-${contactId}-HP`).value
+
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/contacts/${contactId}`, {
+							method: "PATCH", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify({name: name, HP: HP})
+						})
+					} catch (e) {
+						alertError("연락처 수정에 실패했습니다.")
+					}
+				}
+
+				async function deleteContact(contactId) {
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/contacts/${contactId}`, {method: "DELETE"})
+						document.getElementById(`contact-${contactId}-row`).remove()
+					} catch (e) {
+						alertError("연락처 삭제에 실패했습니다.")
+					}
+				}
+
+				function checkReceiverInput(contactId) {
+					const birthdayInput = document.getElementById(`contact-${contactId}-birthday`)
+					const agreementInput = document.getElementById(`contact-${contactId}-agreement`)
+					const signButton = document.getElementById(`contact-${contactId}-signButton`)
+					if (birthdayInput.value && agreementInput.checked) {
+						signButton.disabled = false
+					} else {
+						signButton.disabled = true
+					}
+				}
+
+				async function allocateOrder() {
+					const vehicleId = document.getElementById("vehicle-id").value
+					try {
+						const alloationResponse = await fetch(`${location.origin}/api/v1${location.pathname}/allocate`, {
+							method: "POST", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify({"vehicle_id": vehicleId})
+						})
+						console.log(alloationResponse)
+						if (alloationResponse.status !== 204) throw new Error()
+						location.reload()
+					} catch (e) {
+						alertError("오더 배차에 실패했습니다. 차량번호를 확인해 주세요.")
+					}
+				}
+
+				async function deallocateOrder() {
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/deallocate`, {method: "POST"})
+						location.href = "/orders/ongoing"
+					} catch (e) {
+						alertError("배차 취소에 실패했습니다.")
+					}
+				}
+
+				async function signOnboard(vender) {
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/onboard?vender=${vender}`, {method: "POST"})
+					} catch (e) {
+						alertError("상차 서명 요청에 실패했습니다.")
+					}
+				}
+
+				async function signOutboard(contactId, vender) {
+					const name = document.getElementById(`contact-${contactId}-name`).value
+					const HP = document.getElementById(`contact-${contactId}-HP`).value
+					const birthday = document.getElementById(`contact-${contactId}-birthday`).value
+
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/outboard?vender=${vender}`, {
+							method: "POST", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify({name: name, HP: HP, birthday: birthday})
+						})
+					} catch (e) {
+						alertError("하차 서명 요청에 실패했습니다.")
+					}
+				}
+
+				async function cancelOrder() {
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/cancel`, {method: "POST"})
+						location.reload()
+					} catch (e) {
+						alertError("오더 취소 요청에 실패했습니다.")
+					}
+				}
+
+				async function setOrderFailed() {
+					try {
+						await fetch(`${location.origin}/api/v1${location.pathname}/set-failed`, {method: "POST"})
+						location.reload()
+					} catch (e) {
+						alertError("오더 실패처리 요청에 실패했습니다.")
+					}
+				}
+
+				function copyUrl() {
+					const url = document.getElementById("external-link").innerText
+					navigator.clipboard.writeText(url)
+
+					const button = document.getElementById("copy-button")
+					button.classList.add("btn-success")
+					button.classList.remove("btn-primary")
+				}
+			</script>
+
+			{##############################################################################}
+			{# body #}
+			{##############################################################################}
+
+			<div id="alert-div">
+				{% if status == "NO_DRIVER" %}
+					<div class="alert alert-danger alert-dismissible">
+						차량번호에 해당하는 차주 계정이 없습니다.
+						<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+					</div>
+				{% endif %}
+			</div>
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">오더 확인</span>
+			</h1>
+
+			<div class="row justify-content-center">
+				{% set order_path = order.id if user else 'by-token/' + token %}
+				{% if order.document.doc_type.name == "PDF" %}
+					<div class="col-12 col-md-9 col-lg-7">
+						<div class="ratio" style="--bs-aspect-ratio:141.4%">
+							<iframe src="/api/v1/orders/{{ order_path }}/document" width="100%" height="100%"></iframe>
+						</div>
+					</div>
+				{% else %}
+					<div class="col-auto">
+						<div class="card shadow">
+							<div class="card-body overflow-auto">
+								<div id="spreadsheet"></div>
+							</div>
+						</div>
+					</div>
+					<script>
+						(async () => {
+							const documentUrl = "/api/v1/orders/{{ order_path }}/document"
+							const documentResponse = await fetch(documentUrl)
+							const spreadSheetData = await documentResponse.json()
+
+							const columns = spreadSheetData.columns.map((x) => {return {type: "text", width: 100, title: x}})
+							const data = spreadSheetData.data
+							const orderSpreadSheet = jspreadsheet(document.getElementById("spreadsheet"), {
+								about: false,
+								editable: false,
+								allowInsertRow: false,
+								allowManualInsertRow: false,
+								allowInsertColumn:false,
+								allowManualInsertColumn:false,
+								allowDeleteRow:false,
+								allowDeletingAllRows:false,
+								allowDeleteColumn:false,
+								allowRenameColumn:false,
+								allowComments:false,
+								columns: columns,
+								data: data,
+								text: {
+									noRecordsFound: "검색 결과가 없습니다.",
+									showingPage: "{0}/{1} 번째 페이지",
+									show: "",
+									search: "검색",
+									entries: "개 행씩 보기",
+									columnName: "열 이름",
+									insertANewColumnBefore: "왼쪽에 열 삽입",
+									insertANewColumnAfter: "오른쪽에 열 삽입",
+									deleteSelectedColumns: "선택된 열 삭제",
+									renameThisColumn: "현재 열 수정",
+									orderAscending: "오름차순 정렬",
+									orderDescending: "내림차순 정렬",
+									insertANewRowBefore: "위쪽에 행 추가",
+									insertANewRowAfter: "아래쪽에 행 추가",
+									deleteSelectedRows: "선택된 행 삭제",
+									editComments: "주석 수정",
+									addComments: "주석 추가",
+									comments: "주석",
+									clearComments: "주석 삭제",
+									copy: "복사",
+									paste: "붙여넣기",
+									saveAs: "저장하기",
+									about: "정보",
+									areYouSureToDeleteTheSelectedRows: "선택된 행들을 삭제하시겠습니까?",
+									areYouSureToDeleteTheSelectedColumns: "선택된 열들을 삭제하시겠습니까?",
+									thisActionWillDestroyAnyExistingMergedCellsAreYouSure: "이 작업은 모든 병합된 셀을 삭제합니다. 진행하시겠습니까?",
+									thisActionWillClearYourSearchResultsAreYouSure: "이 작업은 검색 결과를 삭제합니다. 진행하시겠습니까?",
+									thereIsAConflictWithAnotherMergedCell: "다른 병합된 셀과 충돌이 발생했습니다.",
+									invalidMergeProperties: "잘못된 병합 속성",
+									cellAlreadyMerged: "셀이 이미 병합되었습니다.",
+									noCellsSelected: "셀이 선택되지 않았습니다."
+								}
+							})
+						})()
+					</script>
+				{% endif %}
+			</div>
+
+			<div class="py-3"></div>
+
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+							<h1 class="fw-bolder text-center mb-3">
+								{% if order.state.name == "REQUESTED" %}
+									기사님이 아직 배정되지 않았습니다.
+								{% elif order.state.name == "ALLOCATED" %}
+									기사님이 배정되어 상차지로 향하고 계십니다.
+								{% elif order.state.name == "SHIPPING" %}
+									기사님이 배송중입니다.
+								{% elif order.state.name == "COMPLATED" %}
+									배송이 완료되었습니다.
+								{% elif order.state.name == "CANCELED" %}
+									오더가 취소되었습니다.
+								{% elif order.state.name == "FAILED" %}
+									오더 도중 문제가 발생했습니다.
+								{% endif %}
+							</h1>
+
+							<div id="sender-contact-list" class="py-2">
+								<h2 class="text-primary fw-bolder">상차지 담당자</h3> <br/>
+								<div class="overflow-auto">
+									<table class="table">
+										<thead>
+											<tr>
+												<th scope="col">이름</th>
+												<th scope="col">연락처</th>
+											{% if user and user.is_sender %}
+												<th scope="col">수정하기</th>
+												<th scope="col">삭제하기</th>
+											{% endif %}
+											</tr>
+										</thead>
+										<tbody id="sender-contact-list-tbody">
+											{% for contact in order.contacts %}
+												{% if contact.role.name == "SENDER" %}
+													<tr id="contact-{{ contact.id }}-row">
+														{% if user and user.is_sender and not order.has_finished %}
+															{{ sender_contact_edit_form(contact) }}
+														{% else %}
+															<td>{{ contact.name }}</td>
+															<td>{{ contact.HP }}</td>
+														{% endif %}
+													</tr>
+												{% endif %}
+											{% endfor %}
+										</tbody>
+									</table>
+								</div>
+
+								{% if user and user.is_sender %}
+									<div class="d-flex justify-content-center">
+										<button class="btn btn-primary" onclick="appendContactForm('sender')">추가</button>
+									</div>
+								{% endif %}
+							</div>
+
+							<div id="sender-contact-list" class="py-2">
+								<h2 class="text-primary fw-bolder">하차지 담당자</h3> <br />
+								<div class="overflow-auto">
+									<table class="table">
+
+										<thead>
+											<tr>
+												<th scope="col">이름</th>
+												<th scope="col">연락처</th>
+											{% if user and user.is_sender %}
+												<th scope="col">수정하기</th>
+												<th scope="col">삭제하기</th>
+											{% elif token and order.state.name == "SHIPPING" %}
+												<th scope="col">서명하기</th>
+											{% endif %}
+											</tr>
+										</thead>
+
+										<tbody id="receiver-contact-list-tbody">
+											{% for contact in order.contacts %}
+												{% if contact.role.name == "RECEIVER" %}
+													<tr id="contact-{{ contact.id }}-row">
+														{% if user and user.is_sender and not order.has_finished %}
+															{{ sender_contact_edit_form(contact) }}
+														{% else %}
+															<td>{{ contact.name }}</td>
+															<td>{{ contact.HP }}</td>
+															{% if not user and order.state.name == "SHIPPING" %}
+																<td>{{ receiver_signing_modal_button(contact) }}</td>
+															{% endif %}
+														{% endif %}
+													</tr>
+												{% endif %}
+											{% endfor %}
+										</tbody>
+
+									</table>
+								</div>
+
+								{% if user and user.is_sender %}
+									<div class="d-flex justify-content-center">
+										<button class="btn btn-primary" onclick="appendContactForm('receiver')">추가</button>
+									</div>
+								{% endif %}
+							</div>
+
+							<div id="driver-contact" class="py-2">
+								<h2 class="text-primary fw-bolder">화물 기사</h3> <br />
+								{% if order.driver %}
+									<div class="overflow-x-scroll">
+										<table class="table">
+											<thead>
+												<tr>
+													<th scope="col">이름</th>
+													<th scope="col">연락처</th>
+												</tr>
+											</thead>
+											<tbody>
+												<tr>
+													<td>{{ order.driver.name }}</td>
+													<td>{{ order.driver.HP }}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								{% elif user and user.is_sender and order.state.name == "REQUESTED" %}
+									<div class="row">
+										<div class="col-7 col-sm-8 col-md-9 col-lg-10">
+											<input id="vehicle-id" name="vehicle-id" class="form-control" placeholder="00가0000" />
+										</div>
+										<div class="col-5 col-sm-4 col-md-3 col-lg-2 d-flex justify-content-end">
+											<button class="btn btn-primary" onclick="allocateOrder()">배차 요청하기</button>
+										</div>
+									</div>
+								{% endif %}
+
+								{% if user and user.is_driver and order.state.name == "ALLOCATED" %}
+									<div class="d-flex justify-content-end">
+										<button class="btn btn-danger mx-2" onclick="deallocateOrder()">취소</button>
+										<div class="btn-group mx-2" role="group">
+											<button
+												type="button"
+												class="btn btn-primary dropdown-toggle"
+												data-bs-toggle="dropdown"
+											>
+												상차
+											</button>
+											<div class="overflow-y-visible">
+												<ul class="dropdown-menu">
+													<li><button class="dropdown-item" onclick="signOnboard('kakao')">카카오 서명</button></li>
+													<li><button class="dropdown-item" onclick="signOnboard('naver')">네이버 서명</button></li>
+													<li><button class="dropdown-item" onclick="signOnboard('pass')">패스 서명</button></li>
+												</ul>
+											</div>
+										</div>
+									</div>
+								{% endif %}
+							</div>
+
+							<div class="py-2"></div>
+
+							{% set is_user_waiting_sender = user and user.is_sender and order.state.name == "REQUESTED" %}
+							{% set is_ongoing = order.state.name in ["ALLOCATED", "SHIPPING"] %}
+							{% set can_issue_token = is_user_waiting_sender or is_ongoing %}
+
+							{% if can_issue_token %}
+								<div id="external-link-div" class="py-2">
+									<h2 class="text-primary fw-bolder">요청 URL</h3> <br />
+										<div class="row">
+											<div class="col-9 col-sm-10 col-lg-11 text-truncate" id="external-link"></div>
+											<div class="col-3 col-sm-2 col-lg-1">
+												<button class="btn btn-primary px-2" id="copy-button" onclick="copyUrl()">복사</button>
+											</div>
+										</div>
+								</div>
+								<script>
+									const externalLinkDiv = document.getElementById("external-link")
+									const externalLink = `${location.origin}/orders/by-token/{{ token }}`
+									externalLinkDiv.appendChild(document.createTextNode(externalLink))
+								</script>
+							{% endif %}
+
+							<div class="py-2"></div>
+
+							{% if user and user.is_sender %}
+								{% if order.state.name in ["REQUESTED", "ALLOCATED"] %}
+									<div id="order-cancel-div" class="py-2">
+										<h2 class="text-primary fw-bolder">요청 취소</h3> <br />
+										<div class="d-flex justify-content-center">
+											<button class="btn btn-danger" onclick="cancelOrder()">취소</button>
+										</div>
+									</div>
+								{% elif order.state.name == "SHIPPING" %}
+									<div id="order-set-failed-div" class="py-2">
+										<h2 class="text-primary fw-bolder">요청 실패 처리</h3> <br />
+										<div class="d-flex justify-content-center">
+											{% if order.can_be_failed  %}
+												<button class="btn btn-danger" onclick="setOrderFailed()">실패 처리</button>
+											{% else %}
+												상차후 48시간 이후에 실패처리가 가능합니다.
+											{% endif %}
+										</div>
+									</div>
+								{% endif %}
+							{% endif %}
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{% if not order.has_finished %}
+				<script>setInterval(checkOrderState, 5000)</script>
+			{% endif %}
+		</div>
+	</section>
+{% endblock %}

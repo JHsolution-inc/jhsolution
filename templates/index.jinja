@@ -1,0 +1,36 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section class="py-5">
+		<div class="container px-5 pb-5">
+			<div class="row gx-5 align-items-center">
+				<div class="col-xxl-7">
+					<div class="d-flex justify-content-center mt-5 mt-xxl-0">
+						<div class="profile bg-gradient-primary-to-secondary">
+							<img class="profile-img" src="assets/logo_square.png" alt="JH솔루션" />
+						</div>
+					</div>
+				</div>
+
+				<div class="col-xxl-5">
+					<div class="py-3"></div>
+					<div class="text-center text-xxl-start">
+						<div class="badge bg-gradient-primary-to-secondary text-white">
+							<h6 class="mt-1">운송계약&middot;전자서명&middot;전문솔루션</h6>
+						</div>
+
+						<h1 class="display-3 fw-bolder text-gradient px-0 mx-0 my-3">
+							간편하고 안전한 전자서명
+						</h1>
+
+						<div class="d-grid gap-3 d-sm-flex justify-content-sm-center justify-content-xxl-start my-3">
+							{% if not user %}
+								<a class="btn btn-primary px-5 py-3 fs-6 fw-bolder" href="/login">바로 로그인하기</a>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+{% endblock %}

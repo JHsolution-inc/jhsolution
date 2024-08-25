@@ -1,0 +1,14 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container text-center">
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="d-inline">에러: {{ status_code.__str__() }}</span>
+			</h1>
+			<h3>{{ detail }}</h3>
+			<div class="py-3"></div>
+			<a href="/" class="btn btn-primary mb-2">돌아가기</a>
+		</div>
+	</section>
+{% endblock %}

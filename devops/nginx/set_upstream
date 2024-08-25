@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+	echo "usage: $0 <service name> <target url>"
+	exit 1
+fi
+
+echo "proxy_pass $2;" > /etc/nginx/upstream/$1

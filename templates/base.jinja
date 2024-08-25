@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+	<head lang="ko">
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+		<meta name="author" content="JHsolution, Inc." />
+		<meta name="description" content="Web Application for Shipping Contract Digital Signature by JHsolution." />
+		<title>JH솔루션</title>
+
+		{% block head_links %}
+			<link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+
+			<!-- Custom Google font-->
+			<link rel="preconnect" href="https://fonts.googleapis.com" />
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+			<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100;200;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet" />
+
+			<!-- Bootstrap-->
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+			<link
+				href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+				rel="stylesheet"
+				integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+				crossorigin="anonymous"
+			>
+			<script
+				src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+				integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+				crossorigin="anonymous"
+			></script>
+
+			<!-- Core theme CSS (includes Bootstrap)-->
+			<link href="/css/styles.css" rel="stylesheet" />
+		{% endblock %} {# block head_links #}
+	</head>
+
+	<body class="d-flex flex-column h-100 bg-light">
+		{% block navigation %}
+			<nav class="navbar navbar-expand-lg navbar-light bg-white py-3 mb-4">
+				<div class="container">
+					<a class="navbar-brand" href="/">
+						<span class="fw-bolder text-primary">JH솔루션</span>
+						{% if test_mode %}
+							<span class="fw-bolder text-danger">테스트 서버</span>
+						{% endif %}
+					</a>
+					<button
+						class="navbar-toggler"
+						type="button"
+						data-bs-toggle="collapse"
+						data-bs-target="#navbarSupportedContent"
+						aria-controls="navbarSupportedContent"
+						aria-expanded="false"
+						aria-label="Toggle navigation"
+					>
+						<span class="navbar-toggler-icon"></span>
+					</button>
+					<div class="collapse navbar-collapse" id="navbarSupportedContent">
+						<ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+							{% if admin %}
+								<li class="nav-item"><a class="nav-link" href="/ADMIN/senders">화주 관리</a></li>
+								<li class="nav-item"><a class="nav-link" href="/ADMIN/drivers">차주 관리</a></li>
+								<li class="nav-item"><a class="nav-link" href="/ADMIN/companies">회사 관리</a></li>
+								<li class="nav-item"><a class="nav-link" href="/ADMIN/logout">관리자 로그아웃</a></li>
+							{% else %}
+								{% if user %}
+									{% if user.is_sender %}
+										<li class="nav-item"><a class="nav-link" href="/orders/publish">오더 요청하기</a></li>
+									{% endif %}
+									<li class="nav-item"><a class="nav-link" href="/orders/requested">대기 오더 확인</a></li>
+									<li class="nav-item"><a class="nav-link" href="/orders/ongoing">진행 오더 확인</a></li>
+									<li class="nav-item"><a class="nav-link" href="/orders/complated">완료 오더 확인</a></li>
+									<li class="nav-item"><a class="nav-link" href="/account">마이 페이지</a></li>
+									<li class="nav-item"><a class="nav-link" href="/logout">로그아웃</a></li>
+								{% else %}
+									<li class="nav-item"><a class="nav-link" href="/login">로그인</a></li>
+								{% endif %}
+							{% endif %}
+						</ul>
+					</div>
+				</div>
+			</nav>
+		{% endblock %} {# block navigation #}
+
+		<main class="flex-shrink-0">
+			{% block content %}{% endblock %}
+		</main>
+
+		{% block footer %}
+			<footer class="bg-white py-4 mt-5">
+				<div class="container">
+					<div class="row align-items-center justify-content-between flex-row mx-2">
+						<div class="col-lg-7 col-md-7 col-sm-12">
+							<div class="row">
+								<div class="small m-0 px-0">Copyright &copy; JH솔루션</div>
+							</div>
+							<div class="row">
+								<div class="col-lg-auto col-sm-12 px-0">
+									<div class="small m-0">대표자: 명재훈, 사업자 등록번호: 213-35-98418<span class="d-none d-lg-inline-block">,&ensp;</span></div>
+								</div>
+								<div class="col-lg-auto col-sm-12 px-0">
+									<div class="small m-0">연락처: myong011@jhsolution.co.kr</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-auto px-0">
+									<div class="small m-0 px-0">사업장 주소: 비공개 전환됨</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-3 col-md-1 col-sm-12 py-1"></div>
+						<div class="col-lg-2 col-md-4 col-sm-12">
+							<a class="small" href="/terms">서비스 이용약관</a>
+						</div>
+					</div>
+				</div>
+			</footer>
+		{% endblock %} {# block footer #}
+	</body>
+</html>

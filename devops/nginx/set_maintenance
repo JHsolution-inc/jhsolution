@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "root /etc/nginx/maintenance;" > /etc/nginx/upstream/application
+echo "index index.html;" >> /etc/nginx/upstream/application

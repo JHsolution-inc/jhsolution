@@ -1,0 +1,385 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			<script src=" https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js "></script>
+			<link href=" https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css " rel="stylesheet">
+			<script src=" https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/index.min.js "></script>
+			<link href=" https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.css " rel="stylesheet">
+
+			<script>
+				function alertError(errorMessage) {
+					const alert = document.createElement("div")
+					alert.classList.add("alert", "alert-danger", "alert-dismissible", "text-center")
+					alert.textContent = `${errorMessage}`
+
+					const alertDismissButton = document.createElement("button")
+					alertDismissButton.setAttribute("data-bs-dismiss", "alert")
+					alertDismissButton.classList.add("btn-close")
+					alertDismissButton.ariaLabel = "Close"
+					alert.appendChild(alertDismissButton)
+
+					const alertDiv = document.getElementById("alert-div")
+					alertDiv.appendChild(alert)
+				}
+
+				function toggleDocumentType() {
+					const documentType = document.getElementById("document-type")
+					const excelForms = document.getElementsByClassName("excel-form")
+					const pdfFroms = document.getElementsByClassName("pdf-form")
+					const orderFiles = document.getElementById("order-files")
+
+					if (documentType.value == "excel") {
+						for (const excelFormElement of excelForms) {
+							excelFormElement.hidden = false
+						}
+						for (const pdfFromElement of pdfFroms) {
+							pdfFromElement.hidden = true
+						}
+						orderFiles.required = false
+						documentType.value = "pdf"
+
+					} else if (documentType.value == "pdf") {
+						for (const excelFormElement of excelForms) {
+							excelFormElement.hidden = true
+						}
+						for (const pdfFromElement of pdfFroms) {
+							pdfFromElement.hidden = false
+						}
+						orderFiles.required = true
+						documentType.value = "excel"
+					}
+				}
+
+				var contactIndex = {"sender": 1, "receiver": 1}
+
+				function createInputFieldDiv(role, field, placeholder) {
+					const index = contactIndex[role]
+					const inputId = `order-${role}-contact-${field}-${index}`
+
+					const input = document.createElement('input')
+					input.id = inputId
+					input.classList.add("form-control")
+					input.classList.add("my-0")
+					input.placeholder = placeholder
+					input.required = true
+
+					const div = document.createElement('div')
+					div.classList.add("col-6")
+					div.classList.add("mx-0")
+					div.classList.add("my-0")
+					div.appendChild(input)
+
+					return div
+				}
+
+				function createInputDiv(role) {
+					const nameInputDiv = createInputFieldDiv(role, "name", "실명입력")
+					const HPInputDiv = createInputFieldDiv(role, "HP", "010XXXXXXXX")
+
+					const div = document.createElement("div")
+					div.classList.add("row")
+					div.classList.add("col-10")
+					div.classList.add("col-sm-11")
+					div.appendChild(nameInputDiv)
+					div.appendChild(HPInputDiv)
+
+					return div
+				}
+
+				function createDeleteButtonDiv(role, index) {
+					const button = document.createElement("button")
+					button.type = "button"
+					button.classList.add("btn")
+					button.classList.add("btn-danger")
+					button.classList.add("px-2")
+					button.classList.add("py-2")
+					button.classList.add("align-self-center")
+					button.appendChild(document.createTextNode("삭제"))
+					button.onclick = () => deleteContactForm(role, index)
+
+					const div = document.createElement("div")
+					div.classList.add("col-2")
+					div.classList.add("col-sm-1")
+					div.classList.add("mx-0")
+					div.classList.add("my-0")
+					div.appendChild(button)
+
+					return div
+				}
+
+				function appendContactFormGroup(role) {
+					const index = contactIndex[role]
+					const inputDiv = createInputDiv(role)
+					const buttonDiv = createDeleteButtonDiv(role, index)
+				
+					const formGroupDiv = document.createElement("div")
+					formGroupDiv.id = `order-${role}-contact-${index}`
+					formGroupDiv.classList.add("row")
+					formGroupDiv.classList.add("my-1")
+					formGroupDiv.classList.add("mb-3")
+					formGroupDiv.appendChild(inputDiv)
+					formGroupDiv.appendChild(buttonDiv)
+
+					const contactList = document.getElementById(`${role}-contact-list`)
+					contactList.appendChild(formGroupDiv)
+
+					contactIndex[role] += 1
+				}
+
+				function deleteContactForm(role, index) {
+					const contactFormId = `order-${role}-contact-${index}`
+					const contactForm = document.getElementById(contactFormId)
+					contactForm.remove()
+				}
+
+				function extractContact(contactFormListElement) {
+					let contacts = []
+					for (const contactFormElement of contactFormListElement.children) {
+						const [_, role, __, index] = contactFormElement.id.split("-")
+						const nameId = `order-${role}-contact-name-${index}`
+						const HPId = `order-${role}-contact-HP-${index}`
+						const name = document.getElementById(nameId).value
+						const HP = document.getElementById(HPId).value
+						contacts.push({"name": name, "HP": HP, "role": role.toUpperCase()})
+					}
+					return contacts
+				}
+
+				async function postOrder() {
+					const documentType = document.getElementById("document-type").value
+					const senderContactFormList = document.getElementById("sender-contact-list")
+					const receiverContactFormList = document.getElementById("receiver-contact-list")
+					const senderContacts = extractContact(senderContactFormList)
+					const receiverContacts = extractContact(receiverContactFormList)
+					const vehicleId = document.getElementById("vehicle-id").value
+
+					try {
+						const APIPrefix = `${location.origin}/api/v1`
+						let orderId = null
+
+						// Post the order
+
+						if (documentType == "excel") {
+							const sheetData = orderSpreadSheet.getData()
+							const numColumn = sheetData[0].length
+							const sheetColumns = [...Array(numColumn).keys()].map((x) => orderSpreadSheet.getHeader(x))
+							const bodyData = JSON.stringify({columns: sheetColumns, data: sheetData})
+
+							const postOrderResponse = await fetch(`${APIPrefix}/orders/json`, {
+								headers: {"Content-Type": "application/json"}, method: "POST", body: bodyData
+							})
+
+							if (postOrderResponse.status !== 200) throw new Error()
+							orderId = (await postOrderResponse.json()).oid
+
+						} else if (documentType == "PDF") {
+							const files = document.getElementById("order-files").files
+							const formData = new FormData()
+							let totalSize = 0
+
+							for (const file of files) {
+								formData.append('order_files', file)
+								totalSize += file.size
+							}
+
+							if (totalSize > 100_000_000) {
+								alertError("파일 최대 사이즈는 총합 100MB 입니다.")
+								return
+							}
+
+							const postOrderResponse = await fetch(`${APIPrefix}/orders/pdf`, {
+								method: "POST", body: formData
+							})
+
+							if (postOrderResponse.status !== 200) throw new Error()
+							orderId = (await postOrderResponse.json()).oid
+						}
+
+						// Add contact informations
+
+						const postContactResponse = await fetch(`${APIPrefix}/orders/${orderId}/contacts`, {
+							method: "POST", headers: {"Content-Type": "application/json"},
+							body: JSON.stringify([...senderContacts, ...receiverContacts]),
+						})
+
+						if (postContactResponse.status !== 200) throw new Error()
+
+						if (vehicleId == "") {
+							location.href = `/orders/${orderId}`
+							return
+						}
+
+						// Allocate the driver
+
+						try {
+							const allocationResponse = await fetch(`${APIPrefix}/orders/${orderId}/allocate`, {
+								method: "POST", headers: {"Content-Type": "application/json"},
+								body: JSON.stringify({"vehicle_id": vehicleId})
+							})
+
+							if (allocationResponse.status !== 204) throw new Error()
+							location.href = `/orders/${orderId}`
+						} catch (e) {
+							location.href = `/orders/${orderId}?status=NO_DRIVER`
+						}
+
+					} catch (e) {
+						console.log(e)
+						alertError("오더 요청이 실패하였습니다. 관리자에게 문의 바랍니다.")
+					}
+				}
+			</script>
+
+			<div id="alert-div"></div>
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">오더 요청하기</span>
+			</h1>
+
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+							<form name="post-order" onsubmit="postOrder(); return false;">
+								<div class="form-group px-3">
+									<input type="hidden" id="document-type" value="excel" autocomplete="off">
+
+									<div class="row column-gap-1">
+										<div class="col-3">
+											<button type="button" class="btn btn-primary py-1" onclick="toggleDocumentType()">
+												<span class="excel-form">PDF</span><span class="pdf-form" hidden>엑셀</span>
+											</button>
+										</div>
+										<h2 class="col-8 col-sm-6 text-primary text-center fw-bolder">
+											오더 문서 - 
+											<span class="excel-form">엑셀</span><span class="pdf-form" hidden>PDF</span>
+										</h2>
+									</div>
+									<div class="excel-form row">
+										<div class="col-6 col-sm-8 px-3"></div>
+										<div class="col-3 col-sm-2">
+											<button type="button" data-bs-toggle="modal" data-bs-target="#excel-modal" class="btn btn-primary">수정</button>
+											<div class="modal fade" id="excel-modal" tabindex="-1">
+												<div class="modal-dialog modal-dialog-centered">
+													<div class="modal-content">
+														<div class="modal-header">
+															<h2 class="modal-title text-primary text-center fw-bolder">오더 정보</h2>
+															<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+														</div>
+														<div class="modal-body overflow-auto">
+															<div id="spreadsheet"></div>
+															<script>
+																const orderSpreadSheet = jspreadsheet(document.getElementById("spreadsheet"), {
+																	about: false,
+																	columns: [
+																		{type: "text", width: 100, title: "물품명"},
+																		{type: "text", width: 100, title: "수량"},
+																		{type: "text", width: 100, title: "단위가격(원)"},
+																		{type: "text", width: 100, title: "단위무게(kg)"},
+																	],
+																	data: [
+																		["우클릭으로", "열이름", "수정이", "가능합니다"],
+																		["셀들을", "드래그해서", "복사가", "가능합니다"],
+																		["아래는", "예시용", "더미데이터", "입니다"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"],
+																		["SAAQ-23", "7", "2134", "1000"]
+																	],
+																	text: {
+																		noRecordsFound: "검색 결과가 없습니다.",
+																		showingPage: "{0}/{1} 번째 페이지",
+																		show: "",
+																		search: "검색",
+																		entries: "개 행씩 보기",
+																		columnName: "열 이름",
+																		insertANewColumnBefore: "왼쪽에 열 삽입",
+																		insertANewColumnAfter: "오른쪽에 열 삽입",
+																		deleteSelectedColumns: "선택된 열 삭제",
+																		renameThisColumn: "현재 열 수정",
+																		orderAscending: "오름차순 정렬",
+																		orderDescending: "내림차순 정렬",
+																		insertANewRowBefore: "위쪽에 행 추가",
+																		insertANewRowAfter: "아래쪽에 행 추가",
+																		deleteSelectedRows: "선택된 행 삭제",
+																		editComments: "주석 수정",
+																		addComments: "주석 추가",
+																		comments: "주석",
+																		clearComments: "주석 삭제",
+																		copy: "복사",
+																		paste: "붙여넣기",
+																		saveAs: "저장하기",
+																		about: "정보",
+																		areYouSureToDeleteTheSelectedRows: "선택된 행들을 삭제하시겠습니까?",
+																		areYouSureToDeleteTheSelectedColumns: "선택된 열들을 삭제하시겠습니까?",
+																		thisActionWillDestroyAnyExistingMergedCellsAreYouSure: "이 작업은 모든 병합된 셀을 삭제합니다. 진행하시겠습니까?",
+																		thisActionWillClearYourSearchResultsAreYouSure: "이 작업은 검색 결과를 삭제합니다. 진행하시겠습니까?",
+																		thereIsAConflictWithAnotherMergedCell: "다른 병합된 셀과 충돌이 발생했습니다.",
+																		invalidMergeProperties: "잘못된 병합 속성",
+																		cellAlreadyMerged: "셀이 이미 병합되었습니다.",
+																		noCellsSelected: "셀이 선택되지 않았습니다."
+																	}
+																})
+															</script>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-3 col-sm-2">
+											<button type="submit" class="btn btn-primary">업로드</button>
+										</div>
+									</div>
+									<div class="pdf-form row" hidden>
+										<div class="col-9 col-sm-10 px-3 mt-1">
+											<input type="file" id="order-files" name="order-files" class="form-control" accept=".pdf" multiple />
+										</div>
+										<button type="submit" class="col-3 col-sm-2 btn btn-primary px-2 py-0 py-sm-1">업로드</button>
+									</div>
+								</div>
+
+								<hr class="hr" />
+
+								<h2 class="text-primary fw-bolder mb-0">상차지 연락처</h2> <br/>
+								<div class="align-content-center" id="sender-contact-list"></div>
+								<div class="d-flex justify-content-center">
+									<button type="button" class="btn btn-primary px-3 py-2" onclick="appendContactFormGroup('sender')">추가</button>
+								</div>
+
+								<hr class="hr" />
+
+								<h2 class="text-primary fw-bolder mb-0">하차지 연락처</h2> <br/>
+								<div class="align-content-center" id="receiver-contact-list"></div>
+								<div class="d-flex justify-content-center">
+									<button type="button" class="btn btn-primary px-3 py-2" onclick="appendContactFormGroup('receiver')">추가</button>
+								</div>
+
+								<hr class="hr" />
+								<h2 class="text-primary fw-bolder mb-0">차주 차량번호</h2> <br/>
+								<div class="form-group row d-flex justify-content-center">
+									<div class="col-9">
+										<input id="vehicle-id" name="vehicle-id" class="form-control" placeholder="00가0000"/>
+									</div>
+								</div>
+							</form>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<script>
+				appendContactFormGroup("sender")
+				appendContactFormGroup("receiver")
+			</script>
+		</div>
+	</section>
+{% endblock %}

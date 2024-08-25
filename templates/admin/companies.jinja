@@ -1,0 +1,115 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			{% if failed_reason %}
+				<div class="alert alert-danger alert-dismissible text-center">
+					{% if failed_reason == "NAME_EXIST" %}
+						동일한 이름의 회사가 이미 존재합니다.
+					{% elif failed_reason == "USER_NOT_EXIST" %}
+						해당 유저 계정이 없습니다.
+					{% elif failed_reason == "USER_HAS_COMPANY" %}
+						해당 계정은 이미 다른 그룹의 멤버입니다.
+					{% else %}
+						회사 그룹 생성이 실패하였습니다.
+					{% endif %}
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			{% endif %}
+
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">회사 그룹 목록</span>
+			</h1>
+
+			<!-- company registration -->
+			<div class="row justify-content-center">
+				<div class="col-auto">
+					<div class="card shadow">
+						<div class="card-body">
+
+								<form name="change-userinfo" method="POST" action="/ADMIN/companies">
+									<script> unblockSave = () => {document.getElementById("save-button").disabled = false} </script>
+
+									<div class="form-group">
+										<label class="form-label" for="name">회사그룹명</label>
+										<input
+											id="name" name="name" class="form-control"
+											onchange="unblockSave()" required
+										/>
+
+										<label class="form-label" for="HP">그룹 관리자 계정번호</label>
+										<input
+											id="owner-id" name="owner_id" class="form-control"
+											onchange="unblockSave()" required
+										/>
+									</div>
+
+									<div class="d-flex justify-content-center my-2">
+										<button type="submit" id="save-button" class="btn btn-primary mb-2" disabled>계정 추가</button>
+									</div>
+								</form>
+
+							</div>
+						</div>
+					</div>
+				</div>
+
+			<div class="pb-4"></div>
+
+			<!-- company list -->
+			<div class="card shadow">
+				<div class="card-body">
+					<div class="overflow-auto">
+
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="d-none d-md-block">그룹번호</span>
+										<span class="d-block d-md-none">#</span>
+									</th>
+									<th scope="col">이름</th>
+									<th scope="col">관리자 번호</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for company in companies %}
+									<tr onclick="location.href = '/ADMIN/companies/{{ company.id }}'">
+										<th scope="row">{{ company.id }}</th>
+										<td>{{ company.name }}</td>
+										<td>{{ company.owner_id}}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+						<nav>
+							<ul class="pagination justify-content-center">
+								<li class="page-item {{'disabled' if page == 1 else ''}}">
+									<a class="page-link" href="/ADMIN/companies?page={{ page - 1 }}" aria-label="Previous">
+										<span aria-hidden="true">&laquo;</span>
+									</a>
+								</li>
+								{% if page > 1 %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/companies?page={{ page - 1 }}">{{ page - 1 }}</a></li>
+								{% endif %}
+								<li class="page-item"><a class="page-link" href="#">{{ page }}</a></li>
+								{% if not is_last_page %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/companies?page={{ page + 1 }}">{{ page + 1 }}</a></li>
+								{% endif %}
+								<li class="page-item {{'disabled' if is_last_page else ''}}">
+									<a class="page-link" href="/ADMIN/companies?page={{ page + 1 }}" aria-label="Next">
+										<span aria-hidden="true">&raquo;</span>
+									</a>
+								</li>
+							</ul>
+						</nav>
+
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

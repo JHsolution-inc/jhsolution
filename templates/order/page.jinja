@@ -1,0 +1,88 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">
+					{% if page_type == "requested" %}
+						대기 오더 목록
+					{% elif page_type == "ongoing" %}
+						진행 오더 목록
+					{% elif page_type == "complated" %}
+						완료 오더 목록
+					{% endif %}
+				</span>
+			</h1>
+
+			<div class="card shadow">
+				<div class="card-body">
+					<div class="overflow-auto">
+
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="d-none d-md-block">오더번호</span>
+										<span class="d-block d-md-none">#</span>
+									</th>
+									<th scope="col">요청 시간</th>
+									<th scope="col">상태</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for order in orders %}
+									<tr onclick="location.href = '/orders/{{ order.id }}'">
+										<th scope="row">{{ order.id }}</th>
+										<td>{{ (order.ordered_time + timedelta).strftime('%Y년 %m월 %d일 %H:%M:%S') }}</td>
+										<td>
+											{% if order.state.name == "REQUESTED" %}
+												요청됨
+											{% elif order.state.name == "ALLOCATED" %}
+												배차됨
+											{% elif order.state.name == "SHIPPING" %}
+												배송중
+											{% elif order.state.name == "COMPLATED" %}
+												완료
+											{% elif order.state.name == "CANCELED" %}
+												취소
+											{% elif order.state.name == "FAILED" %}
+												실패
+											{% endif %}
+										</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+						{% if page_type != "ongoing" %}
+							<nav>
+								<ul class="pagination justify-content-center">
+									<li class="page-item {{'disabled' if page == 1 else ''}}">
+										<a class="page-link" href="/orders/{{ page_type }}?page={{ page - 1 }}" aria-label="Previous">
+											<span aria-hidden="true">&laquo;</span>
+										</a>
+									</li>
+									{% if page > 1 %}
+										<li class="page-item"><a class="page-link" href="/orders/{{ page_type }}?page={{ page - 1 }}">{{ page - 1 }}</a></li>
+									{% endif %}
+									<li class="page-item"><a class="page-link" href="#">{{ page }}</a></li>
+									{% if not is_last_page %}
+										<li class="page-item"><a class="page-link" href="/orders/{{ page_type }}?page={{ page + 1 }}">{{ page + 1 }}</a></li>
+									{% endif %}
+									<li class="page-item {{'disabled' if is_last_page else ''}}">
+										<a class="page-link" href="/orders/{{ page_type }}?page={{ page + 1 }}" aria-label="Next">
+											<span aria-hidden="true">&raquo;</span>
+										</a>
+									</li>
+								</ul>
+							</nav>
+						{% endif %}
+
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

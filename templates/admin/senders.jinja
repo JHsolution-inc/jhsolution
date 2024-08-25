@@ -1,0 +1,68 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+	<section>
+		<div class="container justify-content-center">
+			<h1 class="display-5 fw-bolder mb-0 py-3 pb-5 text-center">
+				<span class="text-gradient d-inline">화주 목록</span>
+			</h1>
+
+			<div class="card shadow">
+				<div class="card-body">
+					<div class="overflow-auto">
+
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="d-none d-md-block">회원번호</span>
+										<span class="d-block d-md-none">#</span>
+									</th>
+									<th scope="col">이메일</th>
+									<th scope="col">회사 이름</th>
+									<th scope="col">회사 주소</th>
+									<th scope="col">회사 그룹 번호</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for sender in senders %}
+									<tr onclick="location.href = '/ADMIN/users/{{ sender.id }}'">
+										<th scope="row">{{ sender.id }}</th>
+										<td>{{ sender.email or "" }}</td>
+										<td>{{ sender.company_name or "" }}</td>
+										<td>{{ sender.company_address or ""}}</td>
+										<td>{{ sender.company.id if sender.company else "" }}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+
+						<nav>
+							<ul class="pagination justify-content-center">
+								<li class="page-item {{'disabled' if page == 1 else ''}}">
+									<a class="page-link" href="/ADMIN/senders?page={{ page - 1 }}" aria-label="Previous">
+										<span aria-hidden="true">&laquo;</span>
+									</a>
+								</li>
+								{% if page > 1 %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/senders?page={{ page - 1 }}">{{ page - 1 }}</a></li>
+								{% endif %}
+								<li class="page-item"><a class="page-link" href="#">{{ page }}</a></li>
+								{% if not is_last_page %}
+									<li class="page-item"><a class="page-link" href="/ADMIN/senders?page={{ page + 1 }}">{{ page + 1 }}</a></li>
+								{% endif %}
+								<li class="page-item {{'disabled' if is_last_page else ''}}">
+									<a class="page-link" href="/ADMIN/senders?page={{ page + 1 }}" aria-label="Next">
+										<span aria-hidden="true">&raquo;</span>
+									</a>
+								</li>
+							</ul>
+						</nav>
+
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</section>
+{% endblock %}

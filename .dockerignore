@@ -1,0 +1,22 @@
+# Development files and secrets
+.vscode
+.git
+.env
+
+# Environments and caches
+.venv
+__pycache__
+.mypy_cache
+.pytest_cache
+node_modules
+
+# Test coverage
+htmlcov
+.coverage
+cov.xml
+
+# Log files
+logs
+
+# css file should be compiled
+static/css/styles.css
