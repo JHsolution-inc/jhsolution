@@ -10,7 +10,7 @@
 이 서비스를 실행하기 위해서는 `python3{,-pip,-venv}`, `postgresql`을 설치해야 합니다.
 또한, [구글 oauth](https://developers.google.com/identity/protocols/oauth2),
 [바로써트](https://www.barocert.com),
-[자동차 정보 공공데이터 API](https://www.barocert.com/https://www.barocert.com/)
+[자동차 정보 공공데이터 API](https://www.data.go.kr/data/15071233/openapi.do)
 를 사용하고 있어 `.env` 파일에 API 키가 없으면 일부 기능이 동작하지 않을 수 있습니다.
 
 1. `python3{,-venv}`, `postgresql`을 설치한 이후 python 패키지들을 설치해 주세요.
